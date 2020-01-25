@@ -1,0 +1,931 @@
+---
+title: "Team7CapstoneCode for R"
+author: "Mychael Solis-Wheeler"
+date: "8/2/2019"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+I. Exploring CO marijuanaa sales & tax revenue data:
+```{r}
+# Packages required
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+set.seed(123)
+
+# Exploratory Analysis CO 2014-2019 marijuana sales & tax revenue
+cosalesrev <- read.csv("MJSalesMonthReports2019.csv")
+cotaxrev <- read.csv("MJTaxMonthReports2019.csv")
+# Visualize CO 2014-2019 monthly total marijuana sales as a time series
+cosalesrev.ts <- ts(cosalesrev$TotalSales, start = c(2014,1), end = c(2018,12), freq = 12)
+plot(cosalesrev.ts, xlab = "Time", ylab = "2014-2018 CO Monthly Total MJ Sales", bty = "l")
+# Visualize CO 2014-2019 monthly total tax fees revenue as a time series
+cotaxrev.ts <- ts(cotaxrev$TotalTaxFees, start = c(2014,1), end = c(2018,12), freq = 12)
+plot(cotaxrev.ts, xlab = "Time", ylab = "2014-2018 CO Monthly Total TaxFees Rev", bty = "l")
+
+# Exploratory Analysis CO 2014-2018 marijuana sales & tax summaries
+cosalessummary <- read.csv("MJSalesSummary2019.csv")
+cotaxsummary <- read.csv("MJTaxSummary2019.csv")
+# Visualize CO 2014-2018 total marijuana sales summary by years as time series
+cosalessummary.ts <- ts(cosalessummary$TotalSales, start = c(2014), end = c(2018), freq = 1)
+cosalessummary.lm <- tslm(cosalessummary.ts ~ trend)
+plot(cosalessummary.ts, xlab = "Time", ylab = "2014-2018 CO Yearly Total MJ Sales", bty = "l")
+lines(cosalessummary.lm$fitted, col="blue", lwd = 2)
+
+# Visualize CO 2014-2019 monthly tax summary by years as a time series
+cotaxsummary.ts <- ts(cotaxsummary$TotalTaxFees, start = c(2014), end = c(2018), freq = 1)
+cotaxsummary.lm <- tslm(cotaxsummary.ts ~ trend)
+plot(cotaxsummary.ts, xlab = "Time", ylab = "2014-2018 CO Yearly Total TaxFees Rev", bty = "l")
+lines(cotaxsummary.lm$fitted, col="blue", lwd = 2)
+
+```
+
+
+II. Exploring CO and TX population data:
+```{r}
+# Packages required
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+set.seed(123)
+
+# Exploratory Analysis CO 2014-2018 population estimates
+costatepop <- read.csv("COCountyPop20142018.csv")
+# Calculate 2014-2017 CO state pop from all CO counties 
+Year <- c(2014,2015,2016,2017, 2018)
+Colorado <- c((sum(costatepop$X2014Pop)),(sum(costatepop$X2015Pop)), (sum(costatepop$X2016Pop)), (sum(costatepop$X2017Pop)), (sum(costatepop$X2018Pop)))
+# Create a 2014-2017 Colorado state pop df
+costatepop.df <- data.frame(Year,Colorado)
+# Visualize CO pop as a time series
+costatepop.ts <- ts(costatepop.df$Colorado, start = c(2014), end = c(2018), freq = 1) 
+# The Linear trend line on CO Pop time series
+costatepop.lm <- tslm(costatepop.ts ~ trend)
+plot(costatepop.ts, xlab = "Time", ylab = "Colorado Pop", bty = "l")
+lines(costatepop.lm$fitted, col="blue", lwd = 2)
+
+# Exploratory Analysis TX 2014-2018 population estimates
+# Select state pop & top 11 populated TX cities & transpose into a time series df
+txcitypop <- read.csv("TXCityPop20142018.csv") 
+txcitypop_edited <- data.frame(head(txcitypop,13))
+tx11citypop.df = setNames(data.frame(t(txcitypop_edited[,-1])), txcitypop_edited[,1])
+
+# Visualizing the given yearly Texas Pop time series
+texaspop.ts <- ts(tx11citypop.df$Texas, start = c(2014), end = c(2018), freq = 1) 
+# The Linear trend line on Texas Pop time series
+texaspop.lm <- tslm(texaspop.ts ~ trend)  
+plot(texaspop.ts, xlab = "Time", ylab = "Texas Pop", bty = "l")
+lines(texaspop.lm$fitted, col="blue", lwd = 2) 
+# The Quadratic trend line on Texas Pop time series
+texaspop.lm <- tslm(texaspop.ts ~ trend + I(trend^2))  
+plot(texaspop.ts, xlab = "Time", ylab = "Texas Pop", bty = "l")
+lines(texaspop.lm$fitted, col="purple", lwd = 2) 
+# The Exponential trend line on Texas Pop time series
+texaspop.lm <- tslm(texaspop.ts ~ trend, lambda = 0) 
+plot(texaspop.ts, xlab = "Time", ylab = "Texas Pop", bty = "l")
+lines(texaspop.lm$fitted, col="green", lwd = 2) 
+
+# Quick summaries of linear, quadratic, exponential, & log models of Texas Pop overall
+y=tx11citypop.df$Texas
+x=tx11citypop.df$Year
+linear.model <- lm(y~x)
+summary(linear.model)
+quadratic.model <- lm((y^2)~x)
+summary(quadratic.model)
+exponential.model <- lm(log(y)~ x)
+summary(exponential.model)
+# Overall, quadratic trend had the highest MRSE (0.997) for Texas Pop but Linear trend was very close behind (0.996). Exponential model performed the least (0.994). Log model was excluded as the x values were non-binary.
+
+# Visualizing the given yearly Houston Pop time series
+houston.ts <- ts(tx11citypop.df$Houston, start = c(2014), end = c(2018), freq = 1)
+# The Linear trend line on Houston Pop time series
+houston.lm <- tslm(houston.ts ~ trend)  
+plot(houston.ts, xlab = "Time", ylab = "Houston Pop", ylim = c(2240000, 2340000), bty = "l")
+lines(houston.lm$fitted, col="blue", lwd = 2) 
+# The Quadratic trend line on Houston Pop time series
+houston.lm <- tslm(houston.ts ~ trend + I(trend^2))  
+plot(houston.ts, xlab = "Time", ylab = "Houston Pop", ylim = c(2240000, 2340000), bty = "l")
+lines(houston.lm$fitted, col="purple", lwd = 2) 
+# The Exponential trend line on Houston Pop time series
+houston.lm <- tslm(houston.ts ~ trend, lambda = 0) 
+plot(houston.ts, xlab = "Time", ylab = "Houston Pop", ylim = c(2240000, 2340000), bty = "l")
+lines(houston.lm$fitted, col="green", lwd = 2) 
+
+# Visualizing the given yearly San Antonio Pop time series
+sanantonio.ts <- ts(tx11citypop.df$SanAntonio, start = c(2014), end = c(2018), freq = 1)
+# The Linear trend line on San Antonio Pop time series
+sanantonio.lm <- tslm(sanantonio.ts ~ trend)  
+plot(sanantonio.ts, xlab = "Time", ylab = "San Antonio Pop", ylim = c(1440000
+, 1540000), bty = "l")  
+lines(sanantonio.lm$fitted, col="blue", lwd = 2) 
+# The Quadratic trend line on San Antonio Pop time series
+sanantonio.lm <- tslm(sanantonio.ts ~ trend + I(trend^2))  
+plot(sanantonio.ts, xlab = "Time", ylab = "San Antonio Pop", ylim = c(1430000
+, 1540000), bty = "l")
+lines(sanantonio.lm$fitted, col="purple", lwd = 2)
+# The Exponential trend line on San Antonio Pop time series
+sanantonio.lm <- tslm(sanantonio.ts ~ trend, lambda = 0)  
+plot(sanantonio.ts, xlab = "Time", ylab = "San Antonio Pop", ylim = c(1430000
+, 1540000), bty = "l")  
+lines(sanantonio.lm$fitted, col="green", lwd = 2)
+
+# Visualizing all other 9 cities Pop with just Linear trend
+# Dallas Pop time series: Mostly linear (Slight Quadratic)
+dallas.ts <- ts(tx11citypop.df$Dallas, start = c(2014), end = c(2018), freq = 1) 
+dallas.lm <- tslm(dallas.ts ~ trend)  
+plot(dallas.ts)
+lines(dallas.lm$fitted, col="blue", lwd = 2) 
+# Austin Pop time series: Mostly linear (Slight Quadratic)
+austin.ts <- ts(tx11citypop.df$Austin, start = c(2014), end = c(2018), freq = 1) 
+austin.lm <- tslm(austin.ts ~ trend) 
+plot(austin.ts)
+lines(austin.lm$fitted, col="blue", lwd = 2) 
+# Fort Worth Pop time series: Exclusively linear
+ftworth.ts <- ts(tx11citypop.df$FortWorth, start = c(2014), end = c(2018), freq = 1)
+ftworth.lm <- tslm(ftworth.ts ~ trend)
+plot(ftworth.ts)
+lines(ftworth.lm$fitted, col="blue", lwd = 2)
+# El Paso Pop time series: Generally linear (Some Quadratic Cubed)
+elpaso.ts <- ts(tx11citypop.df$ElPaso, start = c(2014), end = c(2018), freq = 1) 
+elpaso.lm <- tslm(elpaso.ts ~ trend)
+plot(elpaso.ts)
+lines(elpaso.lm$fitted, col="blue", lwd = 2)
+# Arlington Pop time series: Generally linear (Minor Quadratic)
+arlington.ts <- ts(tx11citypop.df$Arlington, start = c(2014), end = c(2018), freq = 1) 
+arlington.lm <- tslm(arlington.ts ~ trend)
+plot(arlington.ts)
+lines(arlington.lm$fitted, col="blue", lwd = 2)
+# Corpus Christi Pop time series: Generally linear (Some Quadratic)
+cchristi.ts <- ts(tx11citypop.df$CorpusChristi, start = c(2014), end = c(2018), freq = 1)
+cchristi.lm <- tslm(cchristi.ts ~ trend)
+plot(cchristi.ts )
+lines(cchristi.lm$fitted, col="blue", lwd = 2)
+# Plano Pop time series: Generally linear (Minor Quadratic)
+plano.ts <- ts(tx11citypop.df$Plano, start = c(2014), end = c(2018), freq = 1)
+plano.lm <- tslm(plano.ts ~ trend)
+plot(plano.ts )
+lines(plano.lm$fitted, col="blue", lwd = 2)
+# Laredo Pop time series: Mostly linear (Slight Quadratic)
+laredo.ts <- ts(tx11citypop.df$Laredo, start = c(2014), end = c(2018), freq = 1) 
+laredo.lm <- tslm(laredo.ts ~ trend)
+plot(laredo.ts )
+lines(laredo.lm$fitted, col="blue", lwd = 2)
+# Lubbock Pop time series: Mostly linear (Slight Quadratic)
+lubbock.ts <- ts(tx11citypop.df$Lubbock, start = c(2014), end = c(2018), freq = 1) 
+lubbock.lm <- tslm(lubbock.ts ~ trend)
+plot(lubbock.ts )
+lines(lubbock.lm$fitted, col="blue", lwd = 2)
+
+```
+
+
+III. Accuracy measures for forecasting 2018-2022 Texas Pop
+```{r}
+# Packages required to evaluate performance
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+set.seed(123)
+
+# Generate training and validation sets
+texaspop.ts <- ts(tx11citypop.df$Texas, start = c(2014), end = c(2018), freq = 1)
+train.ts <- window(texaspop.ts, start = c(2014), end = c(2017))
+valid.ts <- window(texaspop.ts, start = c(2017),end=c(2018))
+
+# 2018-2022 pop points with Linear Regression forecasting
+texaspop1 <- tslm(train.ts ~ trend)  
+texaspop1.pred <- forecast(texaspop1, h = 5, level = 0)
+plot(texaspop1.pred, ylim = c(26800000, 31000000), ylab = "Texas Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(texaspop1.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Linear Regression forecasting
+round(accuracy(texaspop1.pred, valid.ts), 3)
+#accuracy(texaspop1.lm.pred, texaspop.ts[5]) just in case alternative
+# Predictive values for 2018-2022 points
+texaspop1.pred[["mean"]] # Just one type of value given for mean as it is a Linear Regression
+
+# 2018-2022 pop points with Quadratic Regression forecasting
+texaspop2 <- tslm(train.ts ~ trend + I(trend^2))  
+texaspop2.pred <- forecast(texaspop2, h = 5, level = 0)
+plot(texaspop2.pred, ylim = c(26800000, 31000000), ylab = "Texas Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(texaspop2.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+#Predictive accuracy of Quadratic Regression forecasting
+round(accuracy(texaspop2.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Exponential Regression forecasting
+texaspop3 <- tslm(train.ts ~ trend, lambda = 0) # auto exponential alt-ets
+texaspop3.pred <- forecast(texaspop3, h = 5, level = 0)
+plot(texaspop3.pred, ylim = c(26800000, 31000000), ylab = "Texas Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(texaspop3.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Exponential Regression forecasting
+round(accuracy(texaspop3.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Mean, Naive, & Drift method forecasting
+autoplot(train.ts) +
+  autolayer(meanf(train.ts, h=5),
+    series="Mean", PI=FALSE) +
+  autolayer(naive(train.ts, h=5), # or use rwf(train.ts, h+5)
+    series="Naïve", PI=FALSE) +
+  autolayer(rwf(train.ts, drift=TRUE, h=5),
+    series="Drift", PI=FALSE) +
+  ggtitle("2014-2022 Texas Pop by Mean, Naive, & Drift Forecasting") +
+  xlab("Time") + ylab("Texas Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of Mean method forecasting
+texaspop4.pred <- (meanf(train.ts, h=5))
+round(accuracy(texaspop4.pred, valid.ts), 3)
+# Predictive accuracy of Naive method forecasting
+texaspop5.pred <- (naive(train.ts, h=5))
+round(accuracy(texaspop5.pred, valid.ts), 3)
+# Predictive accuracy of Drift method forecasting
+texaspop6.pred <- (rwf(train.ts, drift=TRUE, h=5))
+round(accuracy(texaspop6.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (HW) Simple, Double, & Damped Exponential forecasting
+texaspop7 <- holt(train.ts, beta=FALSE, gamma=FALSE, h=5)
+texaspop8 <- holt(train.ts, gamma=FALSE, h=5)
+texaspop9 <- holt(train.ts, damped=TRUE, phi = 0.9, h=5)
+autoplot(train.ts) +
+  autolayer(texaspop7, series="HW Simple", PI=FALSE) +
+  autolayer(texaspop8, series="HW Double", PI=FALSE) +
+  autolayer(texaspop9, series="Damped HW", PI=FALSE) +
+  ggtitle("2014-2022 Texas Pop by HW Forecasting") + xlab("Year") +
+  ylab("Texas Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of (HW) HoltWinters-Simple Exponential forecasting
+texaspop7.pred <- texaspop7
+round(accuracy(texaspop7.pred, valid.ts), 3)
+# Predictive accuracy of (HW) HoltWinters-Double Exponential forecasting
+texaspop8.pred <- texaspop8
+round( accuracy(texaspop8.pred, valid.ts), 3)
+# Predictive accuracy of (HW) Damped HoltWinters method forecasting
+texaspop9.pred <- texaspop9
+round(accuracy(texaspop9.pred, valid.ts), 3)
+
+# 2018-2022 pop points with ARIMA forecasting
+texaspop10 <- arima(train.ts, order = c(0,1,1)) # Random Walk with drift
+texaspop10.pred <- forecast(texaspop10, 5)
+plot(texaspop10.pred)
+lines(valid.ts)
+#Predictive accuracy of ARIMA forecasting
+round(accuracy(texaspop10.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Basic) Neural Network forecasting
+texaspop11 <- nnetar(train.ts, size=5, lambda="auto") # With 5 hidden nodes across 1 network to fit
+texaspop11.pred <- forecast(texaspop11, h=5)
+plot(texaspop11.pred)
+#Predictive accuracy of (Basic) Neural Network forecasting
+round(accuracy(texaspop11.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Advanced) Neural Network forecasting
+texaspop12 <- nnetar(train.ts, size=50, repeats=100, lambda="auto") # With 50 hidden nodes across 100 networks to fit with different random starting weights & averaged.
+texaspop12.pred <- forecast(texaspop12, h=5)
+plot(texaspop12.pred)
+#Predictive accuracy of (Advanced) Neural Network forecasting
+round(accuracy(texaspop12.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Bagging forecasting
+texaspop13.pred <- train.ts %>% baggedETS() %>% forecast(h=5)
+autoplot(texaspop13.pred) +
+  autolayer(texaspop13.pred, series="BaggedETS", PI=FALSE) +
+  guides(colour=guide_legend(title="Forecasts"))
+#Predictive accuracy with Bagging forecasting
+round(accuracy(texaspop13.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Combined forecasting (Quadratic Regression, Drift, HW Double Exponential, & (Advanced) Neural Network combined)
+texaspop14.pred <- (texaspop2.pred[["mean"]] + texaspop6.pred[["mean"]] + 
+                  texaspop8.pred[["mean"]] + texaspop12.pred[["mean"]])/4
+autoplot(texaspop14.pred) +
+  autolayer(texaspop.ts, series="Actual Pop") +
+  autolayer(texaspop2.pred, series="Quadratic") +
+  autolayer(texaspop6.pred, series="Drift", PI=FALSE) +
+  autolayer(texaspop8.pred, series="HW-Double Exp", PI=FALSE) +
+  autolayer(texaspop12.pred, series="Advanced NN", PI=FALSE) +
+  autolayer(texaspop14.pred, series="Combination") +
+  xlab("Time") + ylab("Texas Pop") +
+  ggtitle("2014-2022 Texas Pop by Combined Forecasting")
+#Predictive accuracy of Combined forecasting
+round(accuracy(texaspop14.pred, valid.ts), 3)
+#Combined MASE = Advanced NN MASE / (Advanced NN RMSE / Combined RMSE)
+combined_MASE = (accuracy(texaspop12.pred, valid.ts)["Test set","MASE"]) / ((accuracy(texaspop12.pred, valid.ts)["Test set","RMSE"])/ (accuracy(texaspop14.pred, valid.ts)["Test set","RMSE"]))
+round(combined_MASE, 3) 
+# Predictive values for 2019-2022 points
+texaspop14.pred[2:5] # Just one type of value given for each point
+
+# Conclusion: The Combined model performed the best in having the lowest RMSE (4140), MAE (4140), and MASE (0.009) for forecasting 2019-2022 Texas Pop.
+```
+
+
+IV. Accuracy measures for forecasting 2018-2022 Houston Pop
+```{r}
+# Packages required to evaluate performance
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+set.seed(123)
+
+# Generate training and validation sets
+houston.ts <- ts(tx11citypop.df$Houston, start = c(2014), end = c(2018), freq = 1)
+train.ts <- window(houston.ts, start = c(2014), end = c(2017))
+valid.ts <- window(houston.ts, start = c(2017),end=c(2018))
+
+# 2018-2022 pop points with Linear Regression forecasting
+houston1 <- tslm(train.ts ~ trend)  
+houston1.pred <- forecast(houston1, h = 5, level = 0)
+plot(houston1.pred, ylim = c(2240000, 2460000), ylab = "Houston Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(houston1.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Linear Regression forecasting
+round(accuracy(houston1.pred, valid.ts), 3)
+#accuracy(texaspop1.lm.pred, texaspop.ts[5]) just in case alternative
+
+# 2018-2022 pop points with Quadratic Regression forecasting
+houston2 <- tslm(train.ts ~ trend + I(trend^2))  
+houston2.pred <- forecast(houston2, h = 5, level = 80) # At 80% CI level
+plot(houston2.pred, ylim =  c(2240000, 2460000), ylab = "Houston Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(houston2.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+#Predictive accuracy of Quadratic Regression forecasting
+round(accuracy(houston2.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Exponential Regression forecasting
+houston3 <- tslm(train.ts ~ trend, lambda = 0) # auto exponential alt-ets
+houston3.pred <- forecast(houston3, h = 5, level = 0)
+plot(houston3.pred, ylim =  c(2240000, 2460000), ylab = "Houston Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(houston3.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Exponential Regression forecasting
+round(accuracy(houston3.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Mean, Naive, & Drift method forecasting
+autoplot(train.ts) +
+  autolayer(meanf(train.ts, h=5),
+    series="Mean", PI=FALSE) +
+  autolayer(naive(train.ts, h=5), # or use rwf(train.ts, h+5)
+    series="Naïve", PI=FALSE) +
+  autolayer(rwf(train.ts, drift=TRUE, h=5),
+    series="Drift", PI=FALSE) +
+  ggtitle("2014-2022 Houston Pop by Mean, Naive, & Drift Forecasting") +
+  xlab("Years") + ylab("Houston Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of Mean method forecasting
+houston4.pred <- (meanf(train.ts, h=5))
+round(accuracy(houston4.pred, valid.ts), 3)
+# Predictive accuracy of Naive method forecasting
+houston5.pred <- (naive(train.ts, h=5))
+round(accuracy(houston5.pred, valid.ts), 3)
+# Predictive accuracy of Drift method forecasting
+houston6.pred <- (rwf(train.ts, drift=TRUE, h=5))
+round(accuracy(houston6.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (HW) Simple, Double, & Damped Exponential forecasting
+houston7 <- holt(train.ts, beta=FALSE, gamma=FALSE, h=5)
+houston8 <- holt(train.ts, gamma=FALSE, h=5)
+houston9 <- holt(train.ts, damped=TRUE, phi = 0.9, h=5)
+autoplot(train.ts) +
+  autolayer(houston7, series="HW Simple", PI=FALSE) +
+  autolayer(houston8, series="HW Double", PI=FALSE) +
+  autolayer(houston9, series="Damped HW", PI=FALSE) +
+  ggtitle("2014-2022 Houston Pop by HW Forecasting") + xlab("Year") +
+  ylab("Houston Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of (HW) HoltWinters-Simple Exponential forecasting
+houston7.pred <- houston7
+round(accuracy(houston7.pred, valid.ts), 3)
+# Predictive accuracy of (HW) HoltWinters-Double Exponential forecasting
+houston8.pred <- houston8
+round(accuracy(houston8.pred, valid.ts), 3)
+# Predictive accuracy of (HW) Damped HoltWinters method forecasting
+houston9.pred <- houston9
+round(accuracy(houston9.pred, valid.ts), 3)
+
+# 2018-2022 pop points with ARIMA forecasting
+houston10 <- arima(train.ts, order = c(0,1,1)) # Random Walk with drift
+houston10.pred <- forecast(houston10, 5)
+plot(houston10.pred)
+lines(valid.ts)
+#Predictive accuracy of ARIMA forecasting
+round(accuracy(houston10.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Basic) Neural Network forecasting
+houston11 <- nnetar(train.ts, size=5, lambda="auto") # With 5 hidden nodes across 1 network to fit
+houston11.pred <- forecast(houston11, h=5)
+plot(houston11.pred)
+#Predictive accuracy of Neural Network forecasting
+round(accuracy(houston11.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Advanced) Neural Network forecasting
+houston12 <- nnetar(train.ts, size=50, repeats=100, lambda="auto") # With 50 hidden nodes across 100 networks to fit with different random starting weights & averaged.
+houston12.pred <- forecast(houston12, h=5)
+plot(houston12.pred)
+#Predictive accuracy of (Advanced) Neural Network forecasting
+round(accuracy(houston12.pred, valid.ts), 3)
+# Predictive values for 2018-2022 points
+houston12.pred[["mean"]] # Just one type of value given for mean
+
+# 2018-2022 pop points with Bagging forecasting
+houston13.pred <- train.ts %>% baggedETS() %>% forecast(h=5)
+autoplot(houston13.pred) +
+  autolayer(houston13.pred, series="BaggedETS", PI=FALSE) +
+  guides(colour=guide_legend(title="Forecasts"))
+#Predictive accuracy with Bagging forecasting
+round(accuracy(houston13.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Combined forecasting (Quadratic Regression, Drift, HW Double Exponential, & (Advanced) Neural Network combined)
+houston14.pred <- (houston2.pred[["mean"]] + houston6.pred[["mean"]] + 
+                  houston8.pred[["mean"]] + houston12.pred[["mean"]])/4
+autoplot(houston14.pred) +
+  autolayer(houston.ts, series="Actual Pop") +
+  autolayer(houston2.pred, series="Quadratic") +
+  autolayer(houston6.pred, series="Drift", PI=FALSE) +
+  autolayer(houston8.pred, series="HW-Double Exp", PI=FALSE) +
+  autolayer(houston12.pred, series="Advanced NN", PI=FALSE) +
+  autolayer(houston14.pred, series="Combination") +
+  xlab("Time") + ylab("Houston Pop") +
+  ggtitle("2018-2022 Houston Pop by Combined Forecasting")
+#Predictive accuracy of Combined forecasting
+round(accuracy(houston14.pred, valid.ts), 3)
+#Combined MASE = Advanced NN MASE / (Advanced NN RMSE / Combined RMSE)
+combined_MASE = (accuracy(houston12.pred, valid.ts)["Test set","MASE"]) / ((accuracy(houston12.pred, valid.ts)["Test set","RMSE"])/ (accuracy(houston14.pred, valid.ts)["Test set","RMSE"]))
+round(combined_MASE, 3) 
+# Predictive values for 2019-2022 points
+houston14.pred[2:5] # Just one type of value given for each point
+
+# Conclusion: The Combined model performed the best in having the lowest RMSE (1278), MAE (1278), and MASE (0.05) for forecastin 2019-2022 Houston Pop.
+```
+
+
+V. Accuracy measures for forecasting 2018-2022 San Antonio Pop
+```{r}
+# Packages required to evaluate performance
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+set.seed(123)
+
+# Generate training and validation sets
+sanantonio.ts <- ts(tx11citypop.df$SanAntonio, start = c(2014), end = c(2018), freq = 1)
+train.ts <- window(sanantonio.ts, start = c(2014), end = c(2017))
+valid.ts <- window(sanantonio.ts, start = c(2017),end=c(2018))
+
+# 2018-2022 pop points with Linear Regression forecasting
+sanantonio1 <- tslm(train.ts ~ trend)  
+sanantonio1.pred <- forecast(sanantonio1, h = 5, level = 0)
+plot(sanantonio1.pred, ylim = c(1420000, 1660000), ylab = "San Antonio Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(sanantonio1.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Linear Regression forecasting
+round(accuracy(sanantonio1.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Quadratic Regression forecasting
+sanantonio2 <- tslm(train.ts ~ trend + I(trend^2))  
+sanantonio2.pred <- forecast(sanantonio2, h = 5, level = 0)
+plot(sanantonio2.pred, ylim = c(1420000, 1660000), ylab = "San Antonio Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(sanantonio2.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+#Predictive accuracy of Quadratic Regression forecasting
+round(accuracy(sanantonio2.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Exponential Regression forecasting
+sanantonio3 <- tslm(train.ts ~ trend, lambda = 0) # auto exponential alt-ets
+sanantonio3.pred <- forecast(sanantonio3, h = 5, level = 0)
+plot(sanantonio3.pred, ylim = c(1420000, 1660000), ylab = "San Antonio Pop", xlab = "Time", bty = "l", xaxt = "n", xlim = c(2014,2022), main ="", flty = 2)
+axis(1, at = seq(2014,2022, 1), labels = format(seq(2014,2022, 1)))
+lines(sanantonio3.pred$fitted, col="blue", lwd = 2)
+lines(valid.ts)
+# Predictive accuracy of Exponential Regression forecasting
+round(accuracy(sanantonio3.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Mean, Naive, & Drift method forecasting
+autoplot(train.ts) +
+  autolayer(meanf(train.ts, h=5),
+    series="Mean", PI=FALSE) +
+  autolayer(naive(train.ts, h=5), # or use rwf(train.ts, h+5)
+    series="Naïve", PI=FALSE) +
+  autolayer(rwf(train.ts, drift=TRUE, h=5),
+    series="Drift", PI=FALSE) +
+  ggtitle("2014-2022 San Antonio Pop by Mean, Naive, & Drift Forecasting") +
+  xlab("Years") + ylab("San Antonio Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of Mean method forecasting
+sanantonio4.pred <- (meanf(train.ts, h=5))
+round(accuracy(sanantonio4.pred, valid.ts), 3)
+# Predictive accuracy of Naive method forecasting
+sanantonio5.pred <- (naive(train.ts, h=5))
+round(accuracy(sanantonio5.pred, valid.ts), 3)
+# Predictive accuracy of Drift method forecasting
+sanantonio6.pred <- (rwf(train.ts, drift=TRUE, h=5))
+round(accuracy(sanantonio6.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (HW) Simple, Double, & Damped Exponential forecasting
+sanantonio7 <- holt(train.ts, beta=FALSE, gamma=FALSE, h=5)
+sanantonio8 <- holt(train.ts, gamma=FALSE, h=5)
+sanantonio9 <- holt(train.ts, damped=TRUE, phi = 0.9, h=5)
+autoplot(train.ts) +
+  autolayer(sanantonio7, series="HW Simple", PI=FALSE) +
+  autolayer(sanantonio8, series="HW Double", PI=FALSE) +
+  autolayer(sanantonio9, series="Damped HW", PI=FALSE) +
+  ggtitle("2014-2022 San Antonio Pop by HW Forecasting") + xlab("Year") +
+  ylab("San Antonio Pop") +
+  guides(colour=guide_legend(title="Forecast"))
+# Predictive accuracy of (HW) HoltWinters-Simple Exponential forecasting
+sanantonio7.pred <- sanantonio7
+round(accuracy(sanantonio7.pred, valid.ts), 3)
+# Predictive accuracy of (HW) HoltWinters-Double Exponential forecasting
+sanantonio8.pred <- sanantonio8
+round(accuracy(sanantonio8.pred, valid.ts), 3)
+# Predictive accuracy of (HW) Damped HoltWinters method forecasting
+sanantonio9.pred <- sanantonio9
+round(accuracy(sanantonio9.pred, valid.ts), 3)
+
+# 2018-2022 pop points with ARIMA forecasting with drift
+sanantonio10 <- arima(train.ts, order = c(0,1,1)) # Random Walk with drift
+sanantonio10.pred <- forecast(sanantonio10, 5)
+plot(sanantonio10.pred)
+lines(valid.ts)
+#Predictive accuracy of ARIMA forecasting
+round(accuracy(sanantonio10.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Basic) Neural Network forecasting
+sanantonio11 <- nnetar(train.ts, size=5, lambda="auto") # With 5 hidden nodes across 1 network to fit
+sanantonio11.pred <- forecast(sanantonio11, h=5)
+plot(sanantonio11.pred)
+#Predictive accuracy of Neural Network forecasting
+round(accuracy(sanantonio11.pred, valid.ts), 3)
+
+# 2018-2022 pop points with (Advanced) Neural Network forecasting
+sanantonio12 <- nnetar(train.ts, size=50, repeats=100, lambda="auto") # With 50 hidden nodes across 100 networks to fit with different random starting weights & averaged.
+sanantonio12.pred <- forecast(sanantonio12, h=5)
+plot(sanantonio12.pred)
+#Predictive accuracy of (Advanced) Neural Network forecasting
+round(accuracy(sanantonio12.pred, valid.ts), 3)
+# Predictive values for 2018-2022 points
+sanantonio12.pred[["mean"]] # Just one type of value given for mean
+
+# 2018-2022 pop points with Bagging forecasting
+sanantonio13.pred <- train.ts %>% baggedETS() %>% forecast(h=5)
+autoplot(sanantonio13.pred) +
+  autolayer(sanantonio13.pred, series="BaggedETS", PI=FALSE) +
+  guides(colour=guide_legend(title="Forecasts"))
+#Predictive accuracy with Bagging forecasting
+round(accuracy(sanantonio13.pred, valid.ts), 3)
+
+# 2018-2022 pop points with Combined forecasting (Quadratic Regression, Drift, HW Double Exponential, & (Advanced) Neural Network combined)
+sanantonio14.pred <- (sanantonio2.pred[["mean"]] + sanantonio6.pred[["mean"]] + 
+                  sanantonio8.pred[["mean"]] + sanantonio12.pred[["mean"]])/4
+autoplot(sanantonio14.pred) +
+  autolayer(sanantonio.ts, series="Actual Pop") +
+  autolayer(sanantonio2.pred, series="Quadratic") +
+  autolayer(sanantonio6.pred, series="Drift", PI=FALSE) +
+  autolayer(sanantonio8.pred, series="HW-Double Exp", PI=FALSE) +
+  autolayer(sanantonio12.pred, series="Advanced NN", PI=FALSE) +
+  autolayer(sanantonio14.pred, series="Combination") +
+  xlab("Time") + ylab("San Antonio Pop") +
+  ggtitle("2018-2022 San Antonio Pop by Combined Forecasting")
+#Predictive accuracy of Combined forecasting
+round(accuracy(sanantonio14.pred, valid.ts), 3)
+#Combined MASE = Advanced NN MASE / (Advanced NN RMSE / Combined RMSE)
+combined_MASE = (accuracy(sanantonio12.pred, valid.ts)["Test set","MASE"]) / ((accuracy(sanantonio12.pred, valid.ts)["Test set","RMSE"])/ (accuracy(sanantonio14.pred, valid.ts)["Test set","RMSE"]))
+round(combined_MASE, 3)
+# Predictive values for 2019-2022 points
+sanantonio14.pred[2:5] # Just one type of value given for each point
+
+# Conclusion: Although the (Advanced) Neural Network model performed the best in having the lowest RMSE (784), MAE (784), and MASE (0.031) for forecasting 2019-2022 San Antonio Pop, the Combined model had the second lowest RMSE (1531), MAE (1531), and MASE (0.061). Overall, the Combined model generally performed the best across all population types. Therefore, the Combined model was selected as the final forecasting model for all 2019-2022 populations.
+```
+
+
+VI. Calculating & documenting all forecasted 2019-2022 populations
+```{r}
+# Packages required
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+library(graphics)
+library(readr)
+library(tsibble)
+set.seed(123)
+
+# Combined model forecasting for 2019-2022 Pop values of all other 9 cities 
+# For Dallas Pop 2019-2022 fcast values
+dallas.ts <- ts(tx11citypop.df$Dallas,start=c(2014),end=c(2018),freq=1) 
+train.ts <- window(dallas.ts, start = c(2014), end = c(2017))
+valid.ts <- window(dallas.ts, start = c(2017),end=c(2018))
+dallas2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+dallas2.pred <- forecast(dallas2, h = 5, level = 0)
+dallas6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+dallas8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+dallas12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+dallas12.pred <- forecast(dallas12, h=5)
+dallas14.pred <- (dallas2.pred[["mean"]] + dallas6.pred[["mean"]] + 
+                 dallas8.pred[["mean"]] + dallas12.pred[["mean"]])/4 # Combined fcast
+# For Austin Pop 2019-2022 fcast values
+austin.ts <- ts(tx11citypop.df$Austin,start=c(2014),end=c(2018),freq=1) 
+train.ts <- window(austin.ts, start = c(2014), end = c(2017))
+valid.ts <- window(austin.ts, start = c(2017),end=c(2018))
+austin2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+austin2.pred <- forecast(austin2, h = 5, level = 0)
+austin6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+austin8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+austin12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+austin12.pred <- forecast(austin12, h=5)
+austin14.pred <- (austin2.pred[["mean"]] + austin6.pred[["mean"]] + 
+                 austin8.pred[["mean"]] + austin12.pred[["mean"]])/4 # Combined fcast
+# For Fort Worth Pop 2019-2022 fcast values
+ftworth.ts <- ts(tx11citypop.df$FortWorth, start = c(2014), end = c(2018), freq = 1) 
+train.ts <- window(ftworth.ts, start = c(2014), end = c(2017))
+valid.ts <- window(ftworth.ts, start = c(2017),end=c(2018))
+ftworth2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+ftworth2.pred <- forecast(ftworth2, h = 5, level = 0)
+ftworth6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+ftworth8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+ftworth12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+ftworth12.pred <- forecast(ftworth12, h=5)
+ftworth14.pred <- (ftworth2.pred[["mean"]] + ftworth6.pred[["mean"]] + 
+                 ftworth8.pred[["mean"]] + ftworth12.pred[["mean"]])/4 # Combined fcast
+# For El Paso Pop 2019-2022 fcast values
+elpaso.ts <- ts(tx11citypop.df$ElPaso,start=c(2014),end=c(2018),freq=1) 
+train.ts <- window(elpaso.ts, start = c(2014), end = c(2017))
+valid.ts <- window(elpaso.ts, start = c(2017),end=c(2018))
+elpaso2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+elpaso2.pred <- forecast(elpaso2, h = 5, level = 0)
+elpaso6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+elpaso8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+elpaso12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+elpaso12.pred <- forecast(elpaso12, h=5)
+elpaso14.pred <- (elpaso2.pred[["mean"]] + elpaso6.pred[["mean"]] + 
+                 elpaso8.pred[["mean"]] + elpaso12.pred[["mean"]])/4 # Combined fcast
+# For Arlington Pop 2019-2022 fcast values
+arlington.ts <- ts(tx11citypop.df$Arlington,start=c(2014),end=c(2018),freq=1) 
+train.ts <- window(arlington.ts, start = c(2014), end = c(2017))
+valid.ts <- window(arlington.ts, start = c(2017),end=c(2018))
+arlington2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+arlington2.pred <- forecast(arlington2, h = 5, level = 0)
+arlington6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+arlington8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+arlington12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+arlington12.pred <- forecast(arlington12, h=5)
+arlington14.pred <- (arlington2.pred[["mean"]] + arlington6.pred[["mean"]] + 
+                 arlington8.pred[["mean"]] + arlington12.pred[["mean"]])/4 # Combined fcast
+# For Corpus Christi Pop 2019-2022 fcast values
+cchristi.ts <- ts(tx11citypop.df$CorpusChristi,start=c(2014),end=c(2018),freq=1)
+train.ts <- window(cchristi.ts, start = c(2014), end = c(2017))
+valid.ts <- window(cchristi.ts, start = c(2017),end=c(2018))
+cchristi2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+cchristi2.pred <- forecast(cchristi2, h = 5, level = 0)
+cchristi6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+cchristi8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+cchristi12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+cchristi12.pred <- forecast(cchristi12, h=5)
+cchristi14.pred <- (cchristi2.pred[["mean"]] + cchristi6.pred[["mean"]] + 
+                 cchristi8.pred[["mean"]] + cchristi12.pred[["mean"]])/4 # Combined fcast
+# For Plano Pop 2019-2022 fcast values
+plano.ts <- ts(tx11citypop.df$Plano,start=c(2014),end=c(2018),freq=1)
+train.ts <- window(plano.ts, start = c(2014), end = c(2017))
+valid.ts <- window(plano.ts, start = c(2017),end=c(2018))
+plano2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+plano2.pred <- forecast(cchristi2, h = 5, level = 0)
+plano6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+plano8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+plano12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+plano12.pred <- forecast(plano12, h=5)
+plano14.pred <- (plano2.pred[["mean"]] + plano6.pred[["mean"]] + 
+                 plano8.pred[["mean"]] + plano12.pred[["mean"]])/4 # Combined fcast
+# For Laredo Pop 2019-2022 fcast values
+laredo.ts <- ts(tx11citypop.df$Laredo,start=c(2014),end=c(2018),freq=1)
+train.ts <- window(laredo.ts, start = c(2014), end = c(2017))
+valid.ts <- window(laredo.ts, start = c(2017),end=c(2018))
+laredo2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+laredo2.pred <- forecast(laredo2, h = 5, level = 0)
+laredo6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+laredo8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+laredo12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+laredo12.pred <- forecast(laredo12, h=5)
+laredo14.pred <- (laredo2.pred[["mean"]] + laredo6.pred[["mean"]] + 
+                 laredo8.pred[["mean"]] + laredo12.pred[["mean"]])/4 # Combined fcast
+# For Lubbock Pop 2019-2022 fcast values
+lubbock.ts <- ts(tx11citypop.df$Lubbock,start=c(2014),end=c(2018),freq=1)
+train.ts <- window(lubbock.ts, start = c(2014), end = c(2017))
+valid.ts <- window(lubbock.ts, start = c(2017),end=c(2018))
+lubbock2 <- tslm(train.ts ~ trend + I(trend^2)) # Quadratic reg fcast
+lubbock2.pred <- forecast(lubbock2, h = 5, level = 0)
+lubbock6.pred <- (rwf(train.ts, drift=TRUE, h=5)) # Drift method fcast
+lubbock8.pred <- holt(train.ts, gamma=FALSE, h=5) # HW-Double Expo fcast
+lubbock12 <- nnetar(train.ts,size=50,repeats=100,lambda="auto") # Advanced NN fcast
+lubbock12.pred <- forecast(lubbock12, h=5)
+lubbock14.pred <- (lubbock2.pred[["mean"]] + lubbock6.pred[["mean"]] + 
+                 lubbock8.pred[["mean"]] + lubbock12.pred[["mean"]])/4 # Combined fcast
+
+# Calculate 2019-2022 fcast values for state & all cities pop
+Year <- c("2018Pop","2019Pop","2020Pop","2021Pop","2022Pop")
+Texas <- c(texaspop.ts[5],round(texaspop14.pred[2:5]))
+Houston <- c(houston.ts[5],round(houston14.pred[2:5]))
+SanAntonio <- c(sanantonio.ts[5],round(sanantonio14.pred[2:5]))
+Dallas <- c(dallas.ts[5],round(dallas14.pred[2:5]))
+Austin <- c(austin.ts[5],round(austin14.pred[2:5]))
+FortWorth <- c(ftworth.ts[5],round(ftworth14.pred[2:5]))
+ElPaso <- c(elpaso.ts[5],round(elpaso14.pred[2:5]))
+Arlington <- c(arlington.ts[5],round(arlington14.pred[2:5]))
+CorpusChristi <- c(cchristi.ts[5],round(cchristi14.pred[2:5]))
+Plano <- c(plano.ts[5],round(plano14.pred[2:5]))
+Laredo <- c(laredo.ts[5],round(laredo14.pred[2:5]))
+Lubbock <- c(lubbock.ts[5],round(lubbock14.pred[2:5]))
+
+# Create a df with original 2018 pop estimates & 2019-2022 fcast pop values
+FinalPop.df <- data.frame(Year,Texas,Houston,SanAntonio,Dallas,Austin,FortWorth,
+                          ElPaso,Arlington,CorpusChristi,Plano,Laredo,Lubbock)
+# Transpose df for final data product Python processing
+FinalPopt = setNames(data.frame(t(FinalPop.df[,-1])), FinalPop.df[,1])
+# Write out new df with desired columns into a csv file
+write.csv(FinalPopt, "TX11CityPop20182022.csv", row.names=TRUE)
+```
+
+
+VII. Exploring the 3 final data products:
+```{r}
+# Packages required
+library(fpp2)
+library(quantmod)
+library(tseries)
+library(forecast)
+library(zoo)
+library(ggfortify)
+library(ggplot2)
+library(graphics)
+library(readr)
+library(tsibble)
+library(scatterplot3d)
+set.seed(123)
+
+# The 3 final data products to be explored and analyzed
+mjcorates <- read.csv("MJCOAvgsRates20142018.csv")
+mjtxcorev <- read.csv("MJTXCountyRevenue2018.csv")
+mjtx11cityrev <- read.csv("MJTX11CityRevenue20182022.csv")
+
+# Visualize CO 2014-2018 average yearly MJ sales 
+mjcorates1.ts <- ts(mjcorates$AvgTotalSales, start = c(2014), end = c(2018), freq = 1)
+mjcorates1.lm <- tslm(mjcorates1.ts ~ trend)
+plot(mjcorates1.ts, xlab = "Time", ylab = "2014-2018 Avg Yearly Total MJ Sales", bty = "l")
+lines(mjcorates1.lm$fitted, col="blue", lwd = 2)
+# Visualize CO 2014-2018 average yearly MJ tax revenue
+mjcorates2.ts <- ts(mjcorates$AvgTotalTaxFees, start = c(2014), end = c(2018), freq = 1)
+mjcorates2.lm <- tslm(mjcorates2.ts ~ trend)
+plot(mjcorates2.ts, xlab = "Time", ylab = "2014-2018 Avg Yearly Total TaxFees Rev", bty = "l")
+lines(mjcorates2.lm$fitted, col="blue", lwd = 2)
+
+# Visualize CO 2014-2018 average yearly medical MJ sales 
+mjcorates3.ts <- ts(mjcorates$AvgMedicalSales, start = c(2014), end = c(2018), freq = 1)
+mjcorates3.lm <- tslm(mjcorates3.ts ~ trend + I(trend^2))
+plot(mjcorates3.ts, xlab = "Time", ylab = "2014-2018 Avg Yearly Medical MJ Sales",bty="l")
+lines(mjcorates3.lm$fitted, col="purple", lwd = 2)
+# Visualize CO 2014-2018 average yearly retail MJ sales
+mjcorates4.ts <- ts(mjcorates$AvgRetailSales, start = c(2014), end = c(2018), freq = 1)
+mjcorates4.lm <- tslm(mjcorates4.ts ~ trend)
+plot(mjcorates4.ts, xlab = "Time", ylab = "2014-2018 Avg Yearly Retail MJ Sale", bty = "l")
+lines(mjcorates4.lm$fitted, col="blue", lwd = 2)
+
+# Visualize TX 2018 MJ sales and tax rev by top 10 counties by Total MJ Sales
+head(mjtxcorev[order(-mjtxcorev$TotalSales),], 11)
+
+
+# Visualize CO 2014-2018 CO rate model on Total MJ Sales 
+mjcorates5.ts <- ts(mjcorates$TotalSalesRate, start = c(2014), end = c(2018), freq = 1)
+mjcorates5.lm <- tslm(mjcorates5.ts ~ trend)
+plot(mjcorates5.ts, xlab = "Time", ylab = "CO TotalSales Rate by Dollars", bty = "l")
+lines(mjcorates5.lm$fitted, col="blue", lwd = 2)
+
+# Visualize CO 2014-2018 CO rate model on Medical MJ Sales 
+mjcorates6.ts <- ts(mjcorates$MedicalSalesRate, start = c(2014), end = c(2018), freq = 1)
+mjcorates6.lm <- tslm(mjcorates6.ts ~ trend + I(trend^2))
+plot(mjcorates6.ts, xlab = "Time", ylab = "CO MedicalSales Rate by Dollars", bty = "l")
+lines(mjcorates6.lm$fitted, col="purple", lwd = 2)
+
+# Visualize CO 2014-2018 CO rate model on Retail MJ Sales 
+mjcorates7.ts <- ts(mjcorates$RetailSalesRate, start = c(2014), end = c(2018), freq = 1)
+mjcorates7.lm <- tslm(mjcorates7.ts ~ trend)
+plot(mjcorates7.ts, xlab = "Time", ylab = "CO RetailSales Rate by Dollars", bty = "l")
+lines(mjcorates7.lm$fitted, col="orange", lwd = 2)
+
+# Total Sales Rev from summed 2018 TX counties
+sum(mjtxcorev$TotalSales)
+
+# Check classes are numeric for summing
+lapply(mjtx11cityrev, class)
+
+# Exploring the data product results of MJTX11CityRevenue20182022
+# The summed total of marijuana sales across this 2018-2022 TX 5-year projection
+sum(mjtx11cityrev$X2018TotalSales, mjtx11cityrev$X2019TotalSales, mjtx11cityrev$X2020TotalSales, mjtx11cityrev$X2021TotalSales, mjtx11cityrev$X2022TotalSales)
+# $42.2 billion in total marijuana sales
+sum(mjtx11cityrev$X2018MedicalSales, mjtx11cityrev$X2019MedicalSales, mjtx11cityrev$X2020MedicalSales, mjtx11cityrev$X2021MedicalSales, mjtx11cityrev$X2022MedicalSales)
+# $14 billion in medical marijuana sales
+sum(mjtx11cityrev$X2018RetailSales, mjtx11cityrev$X2019RetailSales, mjtx11cityrev$X2020RetailSales, mjtx11cityrev$X2021RetailSales, mjtx11cityrev$X2022RetailSales)
+# $28.2 billion in retail marijuana sales
+sum(mjtx11cityrev$X2018TXSalesTax, mjtx11cityrev$X2019TXSalesTax, mjtx11cityrev$X2020TXSalesTax, mjtx11cityrev$X2021TXSalesTax, mjtx11cityrev$X2022TXSalesTax)
+# $3.5 billion in TX sales tax revenue
+sum(mjtx11cityrev$X2018LicenseFees, mjtx11cityrev$X2019LicenseFees, mjtx11cityrev$X2020LicenseFees, mjtx11cityrev$X2021LicenseFees, mjtx11cityrev$X2022LicenseFees)
+# $460 million in licenses & fees revenue
+sum(mjtx11cityrev$X2018TotalTaxFees, mjtx11cityrev$X2019TotalTaxFees, mjtx11cityrev$X2020TotalTaxFees, mjtx11cityrev$X2021TotalTaxFees, mjtx11cityrev$X2022TotalTaxFees)
+# $6.3 billion in total taxes & fees revenue
+
+# Adjusting mjtx11rev dataframe for visualizing
+txmj11pop_edited <- data.frame(mjtx11cityrev)
+txmj11pop.df = setNames(data.frame(t(txmj11pop_edited[,-1])), txmj11pop_edited[,1])
+# Post-Eval Analysis
+txmjtsales <- read.csv("MJTX11CityTotalSalesRevenue20182022.csv")
+txmjmedsales <- read.csv("MJTX11CityMedSalesRevenue20182022.csv")
+txmjretsales <- read.csv("MJTX11CityRetailSalesRevenue20182022.csv")
+# Visualize TX 2018-2022 Forecasted Total MJ Sales 
+txmjtsales.ts <- ts(txmjtsales$Texas, start = (2018), end = (2022), freq = 1)
+txmjtsales.lm <- tslm(txmjtsales.ts ~ trend)
+plot(txmjtsales.ts, xlab = "Time", ylab = "TX Total MJ Sales", bty = "l")
+lines(txmjtsales.lm$fitted, col="blue", lwd = 2)
+
+# Visualize TX 2018-2022 Forecasted TX Medical MJ Sales  
+txmjmedsales.ts <- ts(txmjmedsales$Texas, start = (2018), end = (2022), freq = 1)
+txmjmedsales.lm <- tslm(txmjmedsales.ts ~ trend + I(trend^2))
+plot(txmjmedsales.ts, xlab = "Time", ylab = "TX Medical MJ Sales", bty = "l")
+lines(txmjmedsales.lm$fitted, col="purple", lwd = 2)
+# Visualize TX 2014-2018 Forecasted TX Retail MJ Sales 
+txmjretsales.ts <- ts(txmjretsales$Texas, start = (2018), end = (2022), freq = 1)
+txmjretsales.lm <- tslm(txmjretsales.ts ~ trend)
+plot(txmjretsales.ts, xlab = "Time", ylab = "TX Retail MJ Sales", bty = "l")
+lines(txmjretsales.lm$fitted, col="orange", lwd = 2)
+
+
+# For Plot of 2018 Total Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2018TotalSales, xlim = c(0, 11), ylim=c(0, 650000000), xlab = 'TX Cities', ylab = 'Total MJ Sales Revenue', main = '2018 Total Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2018TotalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2019 Total Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2019TotalSales, xlim = c(0, 11), ylim=c(0, 650000000), xlab = 'TX Cities', ylab = 'Total MJ Sales Revenue', main = '2019 Total Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2019TotalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2020 Total Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2020TotalSales, xlim = c(0, 11), ylim=c(0, 650000000), xlab = 'TX Cities', ylab = 'Total MJ Sales Revenue', main = '2020 Total Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2020TotalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2021 Total Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2021TotalSales, xlim = c(0, 11), ylim=c(0, 650000000), xlab = 'TX Cities', ylab = 'Total MJ Sales Revenue', main = '2021 Total Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2021TotalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2022 Total Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2022TotalSales, xlim = c(0, 11), ylim=c(0, 650000000), xlab = 'TX Cities', ylab = 'Total MJ Sales Revenue', main = '2022 Total Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2022TotalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+
+
+# For Plot of 2018 Medical Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2018MedicalSales, xlim = c(0, 11), ylim=c(0, 200000000), xlab = 'TX Cities', ylab = 'Medical MJ Sales Revenue', main = '2018 Medical Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2018MedicalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2019 Medical Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2019MedicalSales, xlim = c(0, 11), ylim=c(0, 200000000), xlab = 'TX Cities', ylab = 'Medical MJ Sales Revenue', main = '2019 Medical Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2019MedicalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2020 Medical Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2020MedicalSales, xlim = c(0, 11), ylim=c(0, 200000000), xlab = 'TX Cities', ylab = 'Medical MJ Sales Revenue', main = '2020 Medical Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2020MedicalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2021 Medical Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2021MedicalSales, xlim = c(0, 11), ylim=c(0, 200000000), xlab = 'TX Cities', ylab = 'Medical MJ Sales Revenue', main = '2021 Medical Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2021MedicalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+# For Plot of 2022 Medical Sales by City
+plot(mjtx11cityrev$City, mjtx11cityrev$X2022MedicalSales, xlim = c(0, 11), ylim=c(0, 200000000), xlab = 'TX Cities', ylab = 'Medical MJ SalesRevenue', main = '2022 Medical Marijuana Sales by TX City', pch = 18, col = "blue")
+text(mjtx11cityrev$City, mjtx11cityrev$X2022MedicalSales, row.names(mjtx11cityrev[1:12,]), cex=0.6, pos=3, col="blue")
+
+```
+
+
+
+
+
+
+
+
+
