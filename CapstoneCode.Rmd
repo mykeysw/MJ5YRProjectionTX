@@ -20,8 +20,8 @@ library(ggplot2)
 set.seed(123)
 
 # Exploratory Analysis CO 2014-2019 marijuana sales & tax revenue
-cosalesrev <- read.csv("MJSalesMonthReports2019.csv")
-cotaxrev <- read.csv("MJTaxMonthReports2019.csv")
+cosalesrev <- read.csv("COMJSalesMonthReports2019.csv")
+cotaxrev <- read.csv("COMJTaxMonthReports2019.csv")
 # Visualize CO 2014-2019 monthly total marijuana sales as a time series
 cosalesrev.ts <- ts(cosalesrev$TotalSales, start = c(2014,1), end = c(2018,12), freq = 12)
 plot(cosalesrev.ts, xlab = "Time", ylab = "2014-2018 CO Monthly Total MJ Sales", bty = "l")
@@ -30,8 +30,8 @@ cotaxrev.ts <- ts(cotaxrev$TotalTaxFees, start = c(2014,1), end = c(2018,12), fr
 plot(cotaxrev.ts, xlab = "Time", ylab = "2014-2018 CO Monthly Total TaxFees Rev", bty = "l")
 
 # Exploratory Analysis CO 2014-2018 marijuana sales & tax summaries
-cosalessummary <- read.csv("MJSalesSummary2019.csv")
-cotaxsummary <- read.csv("MJTaxSummary2019.csv")
+cosalessummary <- read.csv("COMJSalesSummary2019.csv")
+cotaxsummary <- read.csv("COMJTaxSummary2019.csv")
 # Visualize CO 2014-2018 total marijuana sales summary by years as time series
 cosalessummary.ts <- ts(cosalessummary$TotalSales, start = c(2014), end = c(2018), freq = 1)
 cosalessummary.lm <- tslm(cosalessummary.ts ~ trend)
@@ -246,7 +246,7 @@ autoplot(train.ts) +
     series="Naïve", PI=FALSE) +
   autolayer(rwf(train.ts, drift=TRUE, h=5),
     series="Drift", PI=FALSE) +
-  ggtitle("2014-2022 Texas Pop by Mean, Naive, & Drift Forecasting") +
+  ggtitle("2018-2022 Texas Pop by Mean, Naive, & Drift Forecasting") +
   xlab("Time") + ylab("Texas Pop") +
   guides(colour=guide_legend(title="Forecast"))
 # Predictive accuracy of Mean method forecasting
@@ -267,7 +267,7 @@ autoplot(train.ts) +
   autolayer(texaspop7, series="HW Simple", PI=FALSE) +
   autolayer(texaspop8, series="HW Double", PI=FALSE) +
   autolayer(texaspop9, series="Damped HW", PI=FALSE) +
-  ggtitle("2014-2022 Texas Pop by HW Forecasting") + xlab("Year") +
+  ggtitle("2018-2022 Texas Pop by HW Forecasting") + xlab("Year") +
   ylab("Texas Pop") +
   guides(colour=guide_legend(title="Forecast"))
 # Predictive accuracy of (HW) HoltWinters-Simple Exponential forecasting
@@ -321,7 +321,7 @@ autoplot(texaspop14.pred) +
   autolayer(texaspop12.pred, series="Advanced NN", PI=FALSE) +
   autolayer(texaspop14.pred, series="Combination") +
   xlab("Time") + ylab("Texas Pop") +
-  ggtitle("2014-2022 Texas Pop by Combined Forecasting")
+  ggtitle("2018-2022 Texas Pop by Combined Forecasting")
 #Predictive accuracy of Combined forecasting
 round(accuracy(texaspop14.pred, valid.ts), 3)
 #Combined MASE = Advanced NN MASE / (Advanced NN RMSE / Combined RMSE)
